@@ -1,0 +1,20 @@
+name: Test Phone Notification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send test notification
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          curl \
+            -H "Title: Chaturbate Alert Test" \
+            -H "Priority: high" \
+            -H "Tags: tada" \
+            -d "🔔 Test notification — your alert system is working!" \
+            "https://ntfy.sh/${NTFY_TOPIC}"
