@@ -1,9 +1,7 @@
-name: CB Live Watcher
+name: Chaturbate Diagnostic
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/5 * * * *"
 
 permissions:
   contents: read
@@ -13,32 +11,35 @@ jobs:
     runs-on: ubuntu-slim
 
     steps:
-      - name: Check Maia Stark
-        env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      - name: Diagnose Chaturbate endpoint
         run: |
-          set -euo pipefail
+          set -u
 
           USERNAME="maia_stark_"
           API="https://chaturbate.com/api/biocontext/${USERNAME}/"
 
-          RESPONSE=$(curl -fsSL \
-            --retry 3 \
+          echo "Testing:"
+          echo "$API"
+          echo
+
+          echo "===== HTTP STATUS + HEADERS ====="
+
+          HTTP_CODE=$(curl -sS \
+            -o /tmp/response.txt \
+            -D /tmp/headers.txt \
+            -w "%{http_code}" \
             --connect-timeout 10 \
             --max-time 30 \
-            -A "Mozilla/5.0" \
-            "$API")
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154.0.0.0 Safari/537.36" \
+            "$API" || true)
 
-          STATUS=$(printf '%s' "$RESPONSE" | jq -r '.room_status // "unknown"')
+          echo "HTTP status: $HTTP_CODE"
+          echo
 
-          echo "Model: $USERNAME"
-          echo "Status: $STATUS"
+          echo "===== RESPONSE HEADERS ====="
+          cat /tmp/headers.txt
+          echo
 
-          if [ "$STATUS" = "public" ]; then
-            curl -fsS \
-              -H "Title: 🔴 Maia Stark is LIVE" \
-              -H "Priority: high" \
-              -H "Tags: red_circle" \
-              -d "Maia Stark is live now!" \
-              "https://ntfy.sh/${NTFY_TOPIC}"
-          fi
+          echo "===== RESPONSE BODY (first 1000 chars) ====="
+          head -c 1000 /tmp/response.txt
+          echo
