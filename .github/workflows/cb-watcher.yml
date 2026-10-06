@@ -1,0 +1,44 @@
+name: CB Live Watcher
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-slim
+
+    steps:
+      - name: Check Maia Stark
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -euo pipefail
+
+          USERNAME="maia_stark_"
+          API="https://chaturbate.com/api/biocontext/${USERNAME}/"
+
+          RESPONSE=$(curl -fsSL \
+            --retry 3 \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -A "Mozilla/5.0" \
+            "$API")
+
+          STATUS=$(printf '%s' "$RESPONSE" | jq -r '.room_status // "unknown"')
+
+          echo "Model: $USERNAME"
+          echo "Status: $STATUS"
+
+          if [ "$STATUS" = "public" ]; then
+            curl -fsS \
+              -H "Title: 🔴 Maia Stark is LIVE" \
+              -H "Priority: high" \
+              -H "Tags: red_circle" \
+              -d "Maia Stark is live now!" \
+              "https://ntfy.sh/${NTFY_TOPIC}"
+          fi
